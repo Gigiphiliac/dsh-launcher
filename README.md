@@ -6,35 +6,34 @@ DSH remains responsible for its own workspace and project management. **DSH Laun
 
 ## Features
 
-* Launch DSH directly from the VS Code Command Palette
+* Launch DSH directly from the VS Code Command Palette or Activity Bar
+* Open DSH in the **Activity Bar sidebar** or an **editor tab** — or both, simultaneously
 * Detect whether DSH is already running before starting it
 * Automatically wait for DSH to become available
-* Display the DSH web interface inside a VS Code panel
+* Reuse an existing DSH instance — no duplicate processes
 * Configure the DSH command, arguments, and server URL
-* Reuse an existing DSH instance instead of starting another one
 
-## Usage
+## Commands
 
-Open the Command Palette:
+| Command                         | Description                                   |
+| ------------------------------- | --------------------------------------------- |
+| `DSH Launcher: Launch`          | Open DSH in the Activity Bar sidebar (default)|
+| `DSH Launcher: Open in Sidebar` | Reveal the DSH Activity Bar sidebar           |
+| `DSH Launcher: Open in Editor`  | Open DSH as an editor tab                     |
 
-```text
-Cmd+Shift+P
-```
+All commands are available from the Command Palette (`Cmd+Shift+P` or `Ctrl+Shift+P`).
 
-Then run:
+The DSH icon also appears in the VS Code Activity Bar. Click it to open the sidebar view.
 
-```text
-DSH Launcher: Launch
-```
+### Open in Sidebar
 
-The extension will:
+Opens DSH in a collapsible sidebar panel within the Activity Bar. The sidebar can be resized and collapsed using normal VS Code behavior.
 
-1. Check whether DSH is already available at the configured URL.
-2. Start DSH with the configured command if it isn't running.
-3. Wait for the server to become available.
-4. Open the DSH interface in a VS Code panel.
+### Open in Editor
 
-If DSH is already running, no new process is started.
+Opens DSH in a regular editor tab, providing the full main-editor area. Calling this command multiple times reveals the existing tab instead of creating duplicates.
+
+Both views share the same DSH server and configuration. Opening one while the other is already open will not start a second DSH process.
 
 ## Configuration
 
@@ -60,33 +59,35 @@ http://127.0.0.1:3080
 
 ## Architecture
 
-DSH Launcher intentionally does not attempt to manage DSH workspaces or reproduce any DSH functionality.
-
-The extension acts as a small bridge between VS Code and the existing DSH web application:
+DSH Launcher uses a shared `DshService` that manages the DSH server lifecycle. Both the sidebar panel and the editor tab depend on this single instance, ensuring DSH is never started twice.
 
 ```text
-┌──────────────────────────┐
-│        VS Code           │
-│                          │
-│     DSH Launcher         │
-│           │              │
-│           │ spawn        │
-│           ▼              │
-│       dsh web            │
-│           │              │
-│           │ HTTP         │
-│           ▼              │
-│    ┌───────────────┐     │
-│    │ DSH Web UI    │     │
-│    │   :3080        │     │
-│    └───────────────┘     │
-│           │              │
-│           ▼              │
-│       Webview            │
-└──────────────────────────┘
+                        VS Code
+                           │
+                    ┌──────┴──────┐
+                    │             │
+              Activity Bar      Command
+                    │             │
+                    ▼             ▼
+              DSH Sidebar    Open in Editor
+                    │             │
+                    ▼             ▼
+              WebviewView     WebviewPanel
+                    │             │
+                    └──────┬──────┘
+                           │
+                           ▼
+                     DSH Web UI
+                           │
+                           ▼
+                  localhost:3080
+                           ▲
+                           │
+                     DshService
+                           │
+                           ▼
+              `dsh web --no-open`
 ```
-
-If DSH is already running, the extension simply connects to the existing instance.
 
 ## Quick Install (Makefile)
 

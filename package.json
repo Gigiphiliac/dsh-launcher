@@ -13,13 +13,42 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "dsh-launcher",
+          "title": "DSH",
+          "icon": "resources/dsh.svg"
+        }
+      ]
+    },
+    "views": {
+      "dsh-launcher": [
+        {
+          "type": "webview",
+          "id": "dsh-launcher.view",
+          "name": "DSH",
+          "icon": "resources/dsh.svg"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "dsh-launcher.launch",
         "title": "DSH Launcher: Launch"
+      },
+      {
+        "command": "dsh-launcher.openSidebar",
+        "title": "DSH Launcher: Open in Sidebar"
+      },
+      {
+        "command": "dsh-launcher.openEditor",
+        "title": "DSH Launcher: Open in Editor"
       }
     ],
     "configuration": {
