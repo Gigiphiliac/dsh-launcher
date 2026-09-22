@@ -88,6 +88,23 @@ The extension acts as a small bridge between VS Code and the existing DSH web ap
 
 If DSH is already running, the extension simply connects to the existing instance.
 
+## Quick Install (Makefile)
+
+The easiest way to build and install the extension is with the included Makefile:
+
+```bash
+make install
+```
+
+This single command compiles the extension, packages it as a VSIX, and installs it into VS Code (overwriting any previous version).
+
+It is equivalent to running:
+
+```bash
+make package
+code --install-extension dsh-launcher-<version>.vsix --force
+```
+
 ## Development
 
 Install dependencies:
@@ -128,7 +145,13 @@ Create a VSIX package:
 pnpm run package
 ```
 
-This produces a file similar to:
+or with the Makefile:
+
+```bash
+make package
+```
+
+Both produce a file similar to:
 
 ```text
 dsh-launcher-0.0.1.vsix
@@ -139,6 +162,8 @@ Install the packaged extension locally with:
 ```bash
 code --install-extension dsh-launcher-0.0.1.vsix
 ```
+
+or all at once using the Makefile (see [Quick Install](#quick-install-makefile)).
 
 ## Requirements
 
