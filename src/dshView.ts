@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { DshService } from "./dsh";
+import { DshService, handleClipboardMessage } from "./dsh";
 import { createDshHtml, LOADING_HTML, ERROR_HTML } from "./dshHtml";
 
 /**
@@ -20,6 +20,11 @@ export class DshViewProvider implements vscode.WebviewViewProvider {
   ): void {
     webviewView.webview.options = { enableScripts: true };
 
+    // Forward clipboard requests from the webview bridge to the system clipboard.
+    webviewView.webview.onDidReceiveMessage((message) => {
+      handleClipboardMessage(message);
+    });
+
     // Show a loading indicator immediately so the sidebar feels responsive.
     webviewView.webview.html = LOADING_HTML;
 
@@ -27,7 +32,10 @@ export class DshViewProvider implements vscode.WebviewViewProvider {
     this.dshService.ensureRunning().then(
       (running) => {
         if (running) {
-          webviewView.webview.html = createDshHtml(this.dshService.serverUrl);
+          webviewView.webview.html = createDshHtml(
+            this.dshService.serverUrl,
+            this.dshService.serverOrigin,
+          );
         } else {
           webviewView.webview.html = ERROR_HTML;
           vscode.window.showErrorMessage(

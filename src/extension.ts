@@ -51,8 +51,15 @@ export function activate(context: vscode.ExtensionContext) {
       await DshPanel.openOrReveal(dshService);
     }),
   );
+
+  // Push the service as a disposable so it is cleaned up on deactivation.
+  context.subscriptions.push({
+    dispose: () => dshService.close(),
+  });
 }
 
 export function deactivate() {
-  // DSH process is detached and intentionally left running when VS Code exits.
+  // DSH child process is not detached — it will be killed when the
+  // extension host shuts down.  The proxy server is closed via the
+  // subscription registered in activate().
 }

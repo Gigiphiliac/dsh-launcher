@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { DshService } from "./dsh";
+import { DshService, handleClipboardMessage } from "./dsh";
 import { createDshHtml } from "./dshHtml";
 
 /**
@@ -46,7 +46,15 @@ export class DshPanel {
       { enableScripts: true },
     );
 
-    panel.webview.html = createDshHtml(dshService.serverUrl);
+    panel.webview.html = createDshHtml(
+      dshService.serverUrl,
+      dshService.serverOrigin,
+    );
+
+    // Forward clipboard requests from the webview bridge to the system clipboard.
+    panel.webview.onDidReceiveMessage((message) => {
+      handleClipboardMessage(message);
+    });
 
     // Clean up the map entry when the panel is closed.
     panel.onDidDispose(() => {

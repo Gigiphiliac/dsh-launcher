@@ -3,9 +3,25 @@
  * the sidebar (WebviewView) and editor (WebviewPanel) views.
  *
  * Keeps the markup in one place so neither UI module duplicates it.
+ *
+ * @param dshUrl - The full URL for the iframe `src` (with `?token=...`).
+ * @param cspOrigin - The origin-only URL used in `frame-src` CSP so that
+ *                    DSH's 303 redirect to `/` is not blocked.
  */
+export function createDshHtml(dshUrl: string, cspOrigin?: string): string {
+  const frameSrc = cspOrigin ?? dshUrl;
+  // VS Code's webview enforces CSP on all content including iframes, so we
+  // must allow both HTTP (fetch/XHR) and WebSocket (ws:) connections to the
+  // proxy origin for the DSH API transport.
+  const wsOrigin = frameSrc.replace(/^http:/, "ws:");
+  const contentSecurity = [
+    `default-src 'none'`,
+    `frame-src ${frameSrc}`,
+    `connect-src ${frameSrc} ${wsOrigin}`,
+    `style-src 'unsafe-inline'`,
+    `script-src 'unsafe-inline'`,
+  ].join("; ");
 
-export function createDshHtml(dshUrl: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -16,7 +32,7 @@ export function createDshHtml(dshUrl: string): string {
     />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; frame-src ${dshUrl}; style-src 'unsafe-inline';"
+      content="${contentSecurity}"
     />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -31,7 +47,29 @@ export function createDshHtml(dshUrl: string): string {
     <title>DSH</title>
   </head>
   <body>
-    <iframe src="${dshUrl}" title="DeepSeek Harness"></iframe>
+    <iframe id="dsh-iframe" src="${dshUrl}" title="DeepSeek Harness"></iframe>
+    <script>
+      (function() {
+        const vscode = acquireVsCodeApi();
+        const iframe = document.getElementById("dsh-iframe");
+
+        window.addEventListener("message", function (event) {
+          // Only accept messages from the DSH iframe.
+          if (event.source !== iframe.contentWindow) return;
+
+          if (
+            !event.data ||
+            event.data.type !== "dsh:clipboard-write" ||
+            typeof event.data.text !== "string"
+          ) return;
+
+          vscode.postMessage({
+            type: "clipboard-write",
+            text: event.data.text,
+          });
+        });
+      }());
+    </script>
   </body>
 </html>`;
 }

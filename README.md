@@ -12,6 +12,7 @@ DSH remains responsible for its own workspace and project management. **DSH Laun
 * Automatically wait for DSH to become available
 * Reuse an existing DSH instance — no duplicate processes
 * Configure the DSH command, arguments, and server URL
+* **Clipboard integration** — copy text and code from DSH into any application
 
 ## Commands
 
@@ -57,6 +58,62 @@ and expects the web interface to be available at:
 http://127.0.0.1:3080
 ```
 
+## Clipboard Integration
+
+Copying text and code from DSH normally uses the browser Clipboard API
+(`navigator.clipboard.writeText` or the `copy` event's `clipboardData`).
+VS Code's webview sandbox blocks these APIs, so copy operations fail when
+DSH is embedded in the Activity Bar sidebar or editor tab.
+
+DSH Launcher solves this with a **clipboard bridge**: DSH forwards
+clipboard requests to the VS Code extension host through a `postMessage`
+channel, and the extension host writes to the real system clipboard using
+`vscode.env.clipboard.writeText`.
+
+### How it works
+
+```text
+DSH web app
+    │
+    │ window.parent.postMessage({ type: "dsh:clipboard-write", text })
+    ▼
+Outer VS Code webview (bridge script)
+    │
+    │ vscode.postMessage({ type: "clipboard-write", text })
+    ▼
+Extension host
+    │
+    │ vscode.env.clipboard.writeText(text)
+    ▼
+System clipboard
+```
+
+### Setup
+
+The clipboard bridge requires a small **DSH client plugin** to be installed
+into your DSH profile. The plugin intercepts `copy` events and
+`navigator.clipboard.writeText()` calls inside DSH and redirects them
+through the bridge.
+
+Install it with:
+
+```bash
+make install-plugin
+```
+
+or manually:
+
+```bash
+dsh plugin --profile web add "file:$(pwd)/resources/dsh-vscode-clipboard"
+```
+
+After installation, reload DSH (`dsh web` or restart the extension).
+
+The plugin works automatically — both keyboard copy (`Cmd+C`)
+and programmatic copy (DSH's copy buttons) are forwarded to the clipboard.
+
+The plugin is a no-op in a normal browser outside VS Code.
+
 ## Architecture
 
 DSH Launcher uses a shared `DshService` that manages the DSH server lifecycle. Both the sidebar panel and the editor tab depend on this single instance, ensuring DSH is never started twice.
@@ -91,19 +148,22 @@ DSH Launcher uses a shared `DshService` that manages the DSH server lifecycle. B
 
 ## Quick Install (Makefile)
 
-The easiest way to build and install the extension is with the included Makefile:
+The easiest way to build, install, and configure everything is with the included Makefile:
 
 ```bash
 make install
 ```
 
-This single command compiles the extension, packages it as a VSIX, and installs it into VS Code (overwriting any previous version).
+This single command compiles the extension, packages it as a VSIX, installs
+it into VS Code (overwriting any previous version), and installs the DSH
+clipboard-bridge plugin into your DSH web profile.
 
 It is equivalent to running:
 
 ```bash
 make package
 code --install-extension dsh-launcher-<version>.vsix --force
+make install-plugin
 ```
 
 ## Development
@@ -171,6 +231,7 @@ or all at once using the Makefile (see [Quick Install](#quick-install-makefile))
 * VS Code
 * DSH installed and available as the configured command
 * DSH's web interface available on the configured URL
+* The DSH clipboard-bridge plugin installed (`make install-plugin` or `make install`)
 
 The default setup assumes:
 
